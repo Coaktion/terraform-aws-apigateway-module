@@ -23,17 +23,17 @@ module "apigateway" {
 
       # All integrations should be previously created
       integration = {
-        lambdas = [ # Opcional
+        lambdas = [ # Optional
           {
             name = "my-lambda",
-            # methods = ["POST", "GET", ...] # Opcional
+            # methods = ["POST", "GET", ...] # Optional
           }
         ]
-        sns = [ # Opcional
+        sns = [ # Optional
           {
             name = "my-tpoic"
-            # fifo = true # Opcional
-            # methods = ["POST", "GET", ...] # Opcional
+            # fifo = true # Optional
+            # methods = ["POST", "GET", ...] # Optional
           }
         ]
       }
