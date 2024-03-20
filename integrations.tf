@@ -21,10 +21,12 @@ resource "aws_api_gateway_integration" "this_cors" {
 resource "aws_api_gateway_method" "this_lambda" {
   for_each = local.lambda_integrations
 
-  rest_api_id   = each.value.rest_api_id
-  resource_id   = each.value.resource_id
-  http_method   = each.value.method
-  authorization = var.cognito_authorizer != null ? "COGNITO_USER_POOLS" : "NONE"
+  rest_api_id = each.value.rest_api_id
+  resource_id = each.value.resource_id
+  http_method = each.value.method
+
+  authorization = local.authorizers[each.value.gtw_name] != null && each.value.with_autorizer ? "COGNITO_USER_POOLS" : "NONE"
+  authorizer_id = local.authorizers[each.value.gtw_name] != null && each.value.with_autorizer ? aws_api_gateway_authorizer.this[each.value.gtw_name].id : null
 }
 
 resource "aws_api_gateway_integration" "this_lambda" {
@@ -42,10 +44,12 @@ resource "aws_api_gateway_integration" "this_lambda" {
 resource "aws_api_gateway_method" "this_pub_sub" {
   for_each = local.sns_integrations
 
-  rest_api_id   = each.value.rest_api_id
-  resource_id   = each.value.resource_id
-  http_method   = each.value.method
-  authorization = var.cognito_authorizer != null ? "COGNITO_USER_POOLS" : "NONE"
+  rest_api_id = each.value.rest_api_id
+  resource_id = each.value.resource_id
+  http_method = each.value.method
+
+  authorization = local.authorizers[each.value.gtw_name] != null && each.value.with_autorizer ? "COGNITO_USER_POOLS" : "NONE"
+  authorizer_id = local.authorizers[each.value.gtw_name] != null && each.value.with_autorizer ? aws_api_gateway_authorizer.this[each.value.gtw_name].id : null
 }
 
 resource "aws_api_gateway_integration" "this_pub_sub" {

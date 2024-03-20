@@ -6,16 +6,29 @@ variable "api_gtw" {
     path  = optional(string, "{proxy+}")
     stage = string
 
+    cognito_authorizer = optional(object({
+      name          = string
+      provider_arns = list(string)
+    }))
+
     integration = object({
       lambdas = optional(list(object({
-        name    = string # Recover an existing lambda by name
-        methods = optional(list(string), ["ANY"])
+        name = string # Recover an existing lambda by name
+
+        integration_methods = optional(list(object({
+          method         = string
+          with_autorizer = optional(bool, false)
+        })), [{ method = "ANY", with_autorizer = false }])
       })))
 
       sns = optional(list(object({
-        name    = string # Recover an existing sns by name
-        fifo    = optional(bool, false)
-        methods = optional(list(string), ["ANY"])
+        name = string # Recover an existing sns by name
+        fifo = optional(bool, false)
+
+        integration_methods = optional(list(object({
+          method         = string
+          with_autorizer = optional(bool, false)
+        })), [{ method = "ANY", with_autorizer = false }])
       })))
     })
 
@@ -32,13 +45,4 @@ variable "api_gtw" {
       unauthorized_cache_control_header_strategy = optional(string)
     }), {})
   }))
-}
-
-variable "cognito_authorizer" {
-  type = object({
-    name          = string
-    type          = string
-    provider_arns = list(string)
-  })
-  default = null
 }
