@@ -13,18 +13,42 @@ module "apigateway" {
       name  = "gateway_name"
       path  = "{proxy+}"
       stage = "dev"
+
+      cognito_authorizer = { # Opcional
+        name          = "my-cognito-authorizer"
+        provider_arns = ["arn:aws:cognito-idp:us-east-1:000000000000:userpool/us-east-1_FAKEID"]
+      }
+
       integration = {
         lambdas = [ # Opcional
           {
             name = "my-lambda",
-            # methods = ["POST", "GET", ...] # Opcional
+            # integration_methods = [ # Opcional
+            #   {
+            #     method         = "GET"
+            #     with_autorizer = false
+            #   },
+            #   {
+            #     method         = "POST"
+            #     with_autorizer = true
+            #   }
+            # ]
           }
         ]
         sns = [ # Opcional
           {
             name = "my-tpoic"
             # fifo = true # Opcional
-            # methods = ["POST", "GET", ...] # Opcional
+            # integration_methods = [ # Opcional
+            #   {
+            #     method         = "GET"
+            #     with_autorizer = false
+            #   },
+            #   {
+            #     method         = "POST"
+            #     with_autorizer = true
+            #   }
+            # ]
           }
         ]
       }
