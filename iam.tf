@@ -1,4 +1,4 @@
-# ----------------------- SNS -----------------------
+# ----------------------- SNS Role -----------------------
 resource "aws_iam_role" "this_sns_integration_role" {
   for_each = local.gateways
 
@@ -22,29 +22,23 @@ resource "aws_iam_role" "this_sns_integration_role" {
   }
 }
 
-resource "aws_iam_policy" "this_sns_publish_policy" {
-  for_each = local.sns_integrations
+# ----------------------- Policy Attachment (Module) -----------------------
+module "policies" {
+  source = "github.com/Coaktion/terraform-policies-module"
 
-  name = "${each.value.integration_name}__sns_publish_policy"
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "sns:Publish"
-        ]
-        Resource = [
-          each.value.topic_arn
-        ]
-      }
-    ]
-  })
-}
+  region     = var.region
+  account_id = var.account_id
 
-resource "aws_iam_role_policy_attachment" "sns_integration_policy" {
-  for_each = local.sns_integrations
-
-  policy_arn = aws_iam_policy.this_sns_publish_policy[each.value.integration_name].arn
-  role       = aws_iam_role.this_sns_integration_role[each.value.gtw_name].name
+  policies = flatten([
+    for sns_policy in local.sns_integrations : {
+      iam_reference = aws_iam_role.this_sns_integration_role[sns_policy.gtw_name].name
+      iam_type      = "role"
+      statements = [
+        {
+          actions   = ["sns:Publish"]
+          resources = [sns_policy.topic_arn]
+        }
+      ]
+    }
+  ])
 }

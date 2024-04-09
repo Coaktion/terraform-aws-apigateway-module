@@ -14,7 +14,10 @@ resource "aws_api_gateway_resource" "this" {
 }
 
 resource "aws_api_gateway_authorizer" "this" {
-  for_each = local.authorizers
+  for_each = tomap({
+    for gtw in var.api_gtw : gtw.name => gtw.cognito_authorizer
+    if gtw.cognito_authorizer != null
+  })
 
   name          = each.value.name
   rest_api_id   = aws_api_gateway_rest_api.this[each.key].id

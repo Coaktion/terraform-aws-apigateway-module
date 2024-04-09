@@ -1,7 +1,7 @@
 locals {
   gateways = tomap({ for api in var.api_gtw : api.name => api })
   authorizers = tomap({
-    for gtw in var.api_gtw : gtw.name => gtw.cognito_authorizer if gtw.cognito_authorizer != null
+    for gtw in var.api_gtw : gtw.name => gtw.cognito_authorizer
   })
 
   # -------------------- Lambda --------------------

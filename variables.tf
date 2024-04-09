@@ -46,3 +46,13 @@ variable "api_gtw" {
     }), {})
   }))
 }
+
+variable "region" {
+  description = "AWS region where the resources will be created."
+  type        = string
+}
+
+variable "account_id" {
+  description = "AWS account id where the resources will be created."
+  type        = string
+}
