@@ -1,3 +1,6 @@
+#################################################
+# ------------ Lambda Response Map ------------ #
+#################################################
 resource "aws_api_gateway_method_response" "this_lambda" {
   for_each = local.lambda_integrations
 
@@ -15,12 +18,12 @@ resource "aws_api_gateway_method_response" "this_lambda" {
   ]
 }
 
-# -------------------------- CORS Mock --------------------------
+#######################################
+# ------------ CORS Mock ------------ #
+#######################################
 resource "aws_api_gateway_method_response" "this_cors" {
-  for_each = local.gateways
-
-  rest_api_id = aws_api_gateway_rest_api.this[each.key].id
-  resource_id = aws_api_gateway_resource.this[each.key].id
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.this.id
   http_method = "OPTIONS"
   status_code = "200"
 
@@ -40,10 +43,8 @@ resource "aws_api_gateway_method_response" "this_cors" {
 }
 
 resource "aws_api_gateway_integration_response" "this_cors" {
-  for_each = local.gateways
-
-  rest_api_id = aws_api_gateway_rest_api.this[each.key].id
-  resource_id = aws_api_gateway_resource.this[each.key].id
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.this.id
   http_method = "OPTIONS"
   status_code = "200"
 
