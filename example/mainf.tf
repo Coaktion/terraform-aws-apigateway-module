@@ -8,50 +8,53 @@ data "aws_region" "current" {}
 module "apigateway" {
   source = "../"
 
-  api_gtw = [
-    {
-      name  = "gateway_name"
-      path  = "{proxy+}"
-      stage = "dev"
+  account_id       = data.aws_caller_identity.current.account_id
+  region           = data.aws_region.current.name
+  resources_prefix = "example" # Opcional
 
-      cognito_authorizer = { # Opcional
-        name          = "my-cognito-authorizer"
-        provider_arns = ["arn:aws:cognito-idp:us-east-1:000000000000:userpool/us-east-1_FAKEID"]
-      }
+  api_gtw = {
+    name  = "my-gateway"
+    stage = "dev"
+    # path  = "/example" # Opcional, padrão => "{proxy+}"
 
-      integration = {
-        lambdas = [ # Opcional
-          {
-            name = "my-lambda",
-            # integration_methods = [ # Opcional
-            #   {
-            #     method         = "GET"
-            #     with_autorizer = false
-            #   },
-            #   {
-            #     method         = "POST"
-            #     with_autorizer = true
-            #   }
-            # ]
-          }
-        ]
-        sns = [ # Opcional
-          {
-            name = "my-tpoic"
-            # fifo = true # Opcional
-            # integration_methods = [ # Opcional
-            #   {
-            #     method         = "GET"
-            #     with_autorizer = false
-            #   },
-            #   {
-            #     method         = "POST"
-            #     with_autorizer = true
-            #   }
-            # ]
-          }
-        ]
-      }
+    # cognito_authorizer = { # Opcional
+    #   name          = "my-cognito-authorizer"
+    #   provider_arns = ["arn:aws:cognito-idp:us-east-1:000000000000:userpool/us-east-1_FAKEID"]
+    # }
+
+    integration = {
+      lambdas = [ # Opcional
+        {
+          name = "my-lambda",
+          # integration_methods = [ # Opcional, padrão => [{ method = "ANY", with_autorizer = false }]
+          #   {
+          #     method         = "GET"
+          #     with_autorizer = false
+          #   },
+          #   {
+          #     method         = "POST"
+          #     with_autorizer = true
+          #   }
+          # ]
+        }
+      ]
+
+      # sns = [ # Opcional
+      #   {
+      #     name = "my-topic"
+      #     fifo = true # Opcional, padrão => false
+      #     integration_methods = [ # Opcional, padrão => [{ method = "ANY", with_autorizer = false }]
+      #       {
+      #         method         = "GET"
+      #         with_autorizer = false
+      #       },
+      #       {
+      #         method         = "POST"
+      #         with_autorizer = true
+      #       }
+      #     ]
+      #   }
+      # ]
     }
-  ]
+  }
 }
