@@ -21,14 +21,18 @@ resource "aws_api_gateway_authorizer" "this" {
 }
 
 resource "aws_api_gateway_stage" "this" {
+  for_each = toset(var.api_gtw.stages)
+
   rest_api_id   = aws_api_gateway_rest_api.this.id
-  stage_name    = var.api_gtw.stage
+  stage_name    = each.key
   deployment_id = aws_api_gateway_deployment.this_gtw_deployment.id
 }
 
 resource "aws_api_gateway_method_settings" "this" {
+  for_each = toset(var.api_gtw.stages)
+
   rest_api_id = aws_api_gateway_rest_api.this.id
-  stage_name  = aws_api_gateway_stage.this.stage_name
+  stage_name  = aws_api_gateway_stage.this[each.key].stage_name
   method_path = "*/*"
 
   settings {

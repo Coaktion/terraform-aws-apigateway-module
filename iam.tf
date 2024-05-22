@@ -28,7 +28,7 @@ resource "aws_iam_role" "this_integration_role" {
 resource "aws_lambda_permission" "this" {
   for_each = local.lambda_integrations
 
-  statement_id  = "AllowExecutionFromAPIGateway"
+  statement_id  = "AllowExecutionFrom__${title(local.gateway_name)}"
   action        = "lambda:InvokeFunction"
   function_name = each.value.lambda_name
   principal     = "apigateway.amazonaws.com"

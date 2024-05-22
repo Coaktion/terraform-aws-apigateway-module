@@ -19,9 +19,9 @@ variable "api_gtw" {
   description = "API Gateway configuration. This is a list of objects, each object represents a gateway. Each gateway has a list of integrations and settings."
 
   type = object({
-    name  = string
-    path  = optional(string, "{proxy+}")
-    stage = string
+    name   = string
+    path   = optional(string, "{proxy+}")
+    stages = list(string)
 
     cognito_authorizer = optional(object({
       name          = string
