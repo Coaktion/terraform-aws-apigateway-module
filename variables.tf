@@ -1,7 +1,24 @@
+variable "region" {
+  description = "AWS region where the resources will be created."
+  type        = string
+}
+
+variable "account_id" {
+  description = "AWS account id where the resources will be created."
+  type        = string
+}
+
+variable "resources_prefix" {
+  description = "Prefix to be used in the resources names."
+  type        = string
+  nullable    = true
+  default     = null
+}
+
 variable "api_gtw" {
   description = "API Gateway configuration. This is a list of objects, each object represents a gateway. Each gateway has a list of integrations and settings."
 
-  type = list(object({
+  type = object({
     name  = string
     path  = optional(string, "{proxy+}")
     stage = string
@@ -44,15 +61,5 @@ variable "api_gtw" {
       require_authorization_for_cache_control    = optional(bool)
       unauthorized_cache_control_header_strategy = optional(string)
     }), {})
-  }))
-}
-
-variable "region" {
-  description = "AWS region where the resources will be created."
-  type        = string
-}
-
-variable "account_id" {
-  description = "AWS account id where the resources will be created."
-  type        = string
+  })
 }

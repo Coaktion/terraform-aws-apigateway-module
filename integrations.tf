@@ -1,23 +1,23 @@
-# ----------------------- CORS -----------------------
+##################################
+# ------------ CORS ------------ #
+##################################
 resource "aws_api_gateway_method" "this_cors" {
-  for_each = local.gateways
-
-  rest_api_id   = aws_api_gateway_rest_api.this[each.key].id
-  resource_id   = aws_api_gateway_resource.this[each.key].id
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.this.id
   http_method   = "OPTIONS"
   authorization = "NONE"
 }
 
 resource "aws_api_gateway_integration" "this_cors" {
-  for_each = local.gateways
-
-  rest_api_id = aws_api_gateway_rest_api.this[each.key].id
-  resource_id = aws_api_gateway_resource.this[each.key].id
-  http_method = aws_api_gateway_method.this_cors[each.key].http_method
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.this.id
+  http_method = aws_api_gateway_method.this_cors.http_method
   type        = "MOCK"
 }
 
-# ----------------------- Lambda -----------------------
+####################################
+# ------------ Lambda ------------ #
+####################################
 resource "aws_api_gateway_method" "this_lambda" {
   for_each = local.lambda_integrations
 
@@ -25,8 +25,8 @@ resource "aws_api_gateway_method" "this_lambda" {
   resource_id = each.value.resource_id
   http_method = each.value.method
 
-  authorization = local.authorizers[each.value.gtw_name] != null && each.value.with_autorizer ? "COGNITO_USER_POOLS" : "NONE"
-  authorizer_id = local.authorizers[each.value.gtw_name] != null && each.value.with_autorizer ? aws_api_gateway_authorizer.this[each.value.gtw_name].id : null
+  authorization = var.api_gtw.cognito_authorizer != null && each.value.with_autorizer ? "COGNITO_USER_POOLS" : "NONE"
+  authorizer_id = var.api_gtw.cognito_authorizer != null && each.value.with_autorizer ? aws_api_gateway_authorizer.this[each.value.gtw_name].id : null
 }
 
 resource "aws_api_gateway_integration" "this_lambda" {
@@ -40,7 +40,9 @@ resource "aws_api_gateway_integration" "this_lambda" {
   uri                     = each.value.lambda_uri
 }
 
-# ----------------------- SNS -----------------------
+#################################
+# ------------ SNS ------------ #
+#################################
 resource "aws_api_gateway_method" "this_pub_sub" {
   for_each = local.sns_integrations
 
@@ -48,8 +50,8 @@ resource "aws_api_gateway_method" "this_pub_sub" {
   resource_id = each.value.resource_id
   http_method = each.value.method
 
-  authorization = local.authorizers[each.value.gtw_name] != null && each.value.with_autorizer ? "COGNITO_USER_POOLS" : "NONE"
-  authorizer_id = local.authorizers[each.value.gtw_name] != null && each.value.with_autorizer ? aws_api_gateway_authorizer.this[each.value.gtw_name].id : null
+  authorization = var.api_gtw.cognito_authorizer != null && each.value.with_autorizer ? "COGNITO_USER_POOLS" : "NONE"
+  authorizer_id = var.api_gtw.cognito_authorizer != null && each.value.with_autorizer ? aws_api_gateway_authorizer.this[each.value.gtw_name].id : null
 }
 
 resource "aws_api_gateway_integration" "this_pub_sub" {
@@ -63,7 +65,7 @@ resource "aws_api_gateway_integration" "this_pub_sub" {
 
   type        = "AWS"
   uri         = "arn:aws:apigateway:us-east-1:sns:action/Publish"
-  credentials = aws_iam_role.this_sns_integration_role[each.value.gtw_name].arn
+  credentials = aws_iam_role.this_integration_role.arn
 
   passthrough_behavior = "WHEN_NO_TEMPLATES"
 
