@@ -1,21 +1,19 @@
-#################################################
-# ------------ Lambda Response Map ------------ #
-#################################################
-resource "aws_api_gateway_method_response" "this_lambda" {
-  for_each = local.lambda_integrations
+######################################################
+# ------------ Integration Response Map ------------ #
+######################################################
+resource "aws_api_gateway_method_response" "this" {
+  for_each = local.lambda_methods
 
-  rest_api_id = each.value.rest_api_id
-  resource_id = each.value.resource_id
-  http_method = each.value.method
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  resource_id = aws_api_gateway_resource.this.id
+  http_method = each.key
   status_code = "200"
 
   response_models = {
     "application/json" = "Empty"
   }
 
-  depends_on = [
-    aws_api_gateway_method.this_lambda
-  ]
+  depends_on = [aws_api_gateway_method.this_lambda]
 }
 
 #######################################

@@ -6,6 +6,6 @@ data "aws_sns_topic" "this" {
 
 # Recover Lambda ARN for Lambda integration
 data "aws_lambda_function" "this" {
-  for_each = toset(local.lambdas_name)
+  for_each      = toset(local.lambdas_name)
   function_name = each.value
 }

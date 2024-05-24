@@ -15,29 +15,40 @@ locals {
   # ------------ Lambda ------------ #
   ####################################
   lambdas = var.api_gtw.integration.lambdas != null ? flatten([
-    for lambda in var.api_gtw.integration.lambdas : merge(
-      lambda, { name = var.resources_prefix != null ? "${var.resources_prefix}__${lambda.name}" : lambda.name }
-    ) if lambda != null
+    for lambda in var.api_gtw.integration.lambdas : flatten([
+      for stage in var.api_gtw.stages : merge(
+        lambda, {
+          name         = var.resources_prefix != null ? lambda.with_stage_postfix ? "${var.resources_prefix}__${lambda.name}__${stage}" : "${var.resources_prefix}__${lambda.name}" : lambda.with_stage_postfix ? "${lambda.name}__${stage}" : lambda.name
+          service_name = lambda.name
+        }
+      ) if lambda != null
+    ])
   ]) : []
 
-  lambdas_name                = flatten([for lambda in local.lambdas : lambda.name])
-  lambdas_integration_methods = flatten([for lambda in local.lambdas : lambda.integration_methods])
+  lambdas_name = flatten([for lambda in local.lambdas : lambda.name])
 
+  lambda_methods = var.api_gtw.integration.lambdas != null ? merge(
+    flatten([
+      for lambda in var.api_gtw.integration.lambdas : tomap({
+        for int_method in lambda.integration_methods : int_method.method => int_method
+      })
+    ])...
+  ) : tomap({})
 
   lambda_integrations = merge(
     flatten([
-      for integration_method in local.lambdas_integration_methods : tomap({
-        for lambda in local.lambdas : "${upper(integration_method.method)} ${lambda.name}" => {
-          integration_name = "${upper(integration_method.method)} ${lambda.name}"
-          gtw_name         = local.gateway_name
-          lambda_name      = lambda.name
-          method           = integration_method.method
-          with_autorizer   = integration_method.with_autorizer
-          lambda_uri       = data.aws_lambda_function.this[lambda.name].invoke_arn
-          rest_api_id      = aws_api_gateway_rest_api.this.id
-          resource_id      = aws_api_gateway_resource.this.id
-        }
-      })
+      for stage in var.api_gtw.stages : flatten([
+        for lambda in local.lambdas : tomap({
+          for integration in lambda.integration_methods : "${upper(integration.method)} ${lambda.name}" => {
+            integration_name = "${upper(integration.method)} ${lambda.name}"
+            gtw_name         = local.gateway_name
+            lambda_name      = lambda.name
+            service_name     = lambda.service_name
+            method           = integration.method
+            lambda_uri       = data.aws_lambda_function.this[lambda.name].invoke_arn
+          }
+        })
+      ])
     ])...
   )
 
@@ -70,8 +81,6 @@ locals {
           with_autorizer   = integration_method.with_autorizer
           fifo             = sns.fifo
           topic_arn        = data.aws_sns_topic.this[sns.name].arn
-          rest_api_id      = aws_api_gateway_rest_api.this.id
-          resource_id      = aws_api_gateway_resource.this.id
           request_mapping  = local.request_mapping[sns.name]
         }
       })
@@ -82,10 +91,12 @@ locals {
   # ------------ Resources ------------ #
   #######################################
   # Used to redeploy API Gateway
-  lambda_resources = toset([
-    for resource in local.lambda_integrations : [
-      aws_api_gateway_method.this_lambda[resource.integration_name],
-      aws_api_gateway_integration.this_lambda[resource.integration_name]
-    ]
-  ])
+  lambda_resources = tomap({
+    for stage in var.api_gtw.stages : stage => flatten([
+      for resource in local.lambda_integrations : [
+        aws_api_gateway_method.this_lambda[resource.method],
+        aws_api_gateway_integration.this_lambda[resource.integration_name]
+      ]
+    ])
+  })
 }

@@ -30,7 +30,8 @@ variable "api_gtw" {
 
     integration = object({
       lambdas = optional(list(object({
-        name = string # Recover an existing lambda by name
+        name               = string                # Recover an existing lambda by name
+        with_stage_postfix = optional(bool, false) # Add the stage name as a postfix to the lambda name (e.g. my-lambda__dev)
 
         integration_methods = optional(list(object({
           method         = string
@@ -39,8 +40,9 @@ variable "api_gtw" {
       })))
 
       sns = optional(list(object({
-        name = string # Recover an existing sns by name
-        fifo = optional(bool, false)
+        name               = string # Recover an existing sns by name
+        fifo               = optional(bool, false)
+        with_stage_postfix = optional(bool, false) # Add the stage name as a postfix to the sns name (e.g. my-sns__dev, my-sns__dev.fifo)
 
         integration_methods = optional(list(object({
           method         = string
