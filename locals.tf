@@ -92,7 +92,6 @@ locals {
       local.sns_resources,    # If any method or integration from sns changes, the deployment will be triggered
       aws_api_gateway_integration_response.this_cors[resource],
       aws_api_gateway_method_response.this_cors[resource],
-      aws_api_gateway_method_settings.this,
     ])
   ])
 }

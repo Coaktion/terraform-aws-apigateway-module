@@ -49,16 +49,16 @@ module "policies" {
   region     = var.region
   account_id = var.account_id
 
-  policies = flatten([
-    for sns_policy in local.sns_list : {
+  policies = [
+    {
       iam_reference = aws_iam_role.this_sns_integration_role[each.value].name
       iam_type      = "role"
       statements = [
         {
           actions   = ["sns:Publish"]
-          resources = [sns_policy.arn]
+          resources = flatten([for sns in local.sns_list : sns.arn])
         }
       ]
     }
-  ])
+  ]
 }
