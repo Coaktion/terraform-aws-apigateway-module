@@ -1,5 +1,5 @@
 output "rest_api" {
-  value = aws_api_gateway_rest_api.this
+  value = local.rest_api
 }
 
 output "gtw_deploy" {
