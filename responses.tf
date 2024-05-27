@@ -4,7 +4,7 @@
 resource "aws_api_gateway_method_response" "this" {
   for_each = local.lambdas
 
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
   resource_id = aws_api_gateway_resource.this[each.value.path].id
   http_method = each.value.method
   status_code = "200"
@@ -22,7 +22,7 @@ resource "aws_api_gateway_method_response" "this" {
 resource "aws_api_gateway_method_response" "this_cors" {
   for_each = local.api_resources
 
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
   resource_id = aws_api_gateway_resource.this[each.value].id
   http_method = "OPTIONS"
   status_code = "200"
@@ -43,7 +43,7 @@ resource "aws_api_gateway_method_response" "this_cors" {
 resource "aws_api_gateway_integration_response" "this_cors" {
   for_each = local.api_resources
 
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
   resource_id = aws_api_gateway_resource.this[each.value].id
   http_method = "OPTIONS"
   status_code = "200"

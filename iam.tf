@@ -9,7 +9,7 @@ resource "aws_lambda_permission" "this" {
   function_name = each.value
   principal     = "apigateway.amazonaws.com"
 
-  source_arn = "${aws_api_gateway_rest_api.this.execution_arn}/*"
+  source_arn = "${local.rest_api.execution_arn}/*"
 }
 
 ######################################

@@ -4,7 +4,7 @@
 resource "aws_api_gateway_method" "this_cors" {
   for_each = local.api_resources
 
-  rest_api_id   = aws_api_gateway_rest_api.this.id
+  rest_api_id   = local.rest_api.id
   resource_id   = aws_api_gateway_resource.this[each.value].id
   http_method   = "OPTIONS"
   authorization = "NONE"
@@ -13,7 +13,7 @@ resource "aws_api_gateway_method" "this_cors" {
 resource "aws_api_gateway_integration" "this_cors" {
   for_each = local.api_resources
 
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
   resource_id = aws_api_gateway_resource.this[each.value].id
   http_method = aws_api_gateway_method.this_cors[each.value].http_method
   type        = "MOCK"
@@ -25,7 +25,7 @@ resource "aws_api_gateway_integration" "this_cors" {
 resource "aws_api_gateway_method" "this_lambda" {
   for_each = local.lambdas
 
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
   resource_id = aws_api_gateway_resource.this[each.value.path].id
   http_method = each.value.method
 
@@ -36,7 +36,7 @@ resource "aws_api_gateway_method" "this_lambda" {
 resource "aws_api_gateway_integration" "this_lambda" {
   for_each = local.lambdas
 
-  rest_api_id             = aws_api_gateway_rest_api.this.id
+  rest_api_id             = local.rest_api.id
   resource_id             = aws_api_gateway_resource.this[each.value.path].id
   http_method             = aws_api_gateway_method.this_lambda[each.key].http_method
   integration_http_method = "POST"
@@ -50,7 +50,7 @@ resource "aws_api_gateway_integration" "this_lambda" {
 resource "aws_api_gateway_method" "this_pub_sub" {
   for_each = local.sns_list
 
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
   resource_id = aws_api_gateway_resource.this[each.value.path].id
   http_method = each.value.method
 
@@ -61,7 +61,7 @@ resource "aws_api_gateway_method" "this_pub_sub" {
 resource "aws_api_gateway_integration" "this_pub_sub" {
   for_each = local.sns_list
 
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
   resource_id = aws_api_gateway_resource.this[each.value.path].id
   http_method = aws_api_gateway_method.this_pub_sub[each.key].http_method
 
