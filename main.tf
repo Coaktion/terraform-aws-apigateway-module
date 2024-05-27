@@ -51,10 +51,7 @@ resource "aws_api_gateway_deployment" "this_gtw_deployment" {
   rest_api_id = aws_api_gateway_rest_api.this.id
 
   triggers = {
-    redeployment = sha1(jsonencode([
-      local.lambda_resources,
-      aws_api_gateway_integration_response.this_cors
-    ]))
+    redeployment = sha1(jsonencode(local.deploy_trigger))
   }
 
   lifecycle {
