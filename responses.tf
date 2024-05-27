@@ -2,11 +2,11 @@
 # ------------ Integration Response Map ------------ #
 ######################################################
 resource "aws_api_gateway_method_response" "this" {
-  for_each = local.lambda_methods
+  for_each = local.lambdas
 
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.this.id
-  http_method = each.key
+  resource_id = aws_api_gateway_resource.this[each.value.path].id
+  http_method = each.value.method
   status_code = "200"
 
   response_models = {
@@ -20,8 +20,10 @@ resource "aws_api_gateway_method_response" "this" {
 # ------------ CORS Mock ------------ #
 #######################################
 resource "aws_api_gateway_method_response" "this_cors" {
+  for_each = local.api_resources
+
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.this.id
+  resource_id = aws_api_gateway_resource.this[each.value].id
   http_method = "OPTIONS"
   status_code = "200"
 
@@ -35,14 +37,14 @@ resource "aws_api_gateway_method_response" "this_cors" {
     "method.response.header.Access-Control-Allow-Origin"  = true
   }
 
-  depends_on = [
-    aws_api_gateway_method.this_cors
-  ]
+  depends_on = [aws_api_gateway_method.this_cors]
 }
 
 resource "aws_api_gateway_integration_response" "this_cors" {
+  for_each = local.api_resources
+
   rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.this.id
+  resource_id = aws_api_gateway_resource.this[each.value].id
   http_method = "OPTIONS"
   status_code = "200"
 

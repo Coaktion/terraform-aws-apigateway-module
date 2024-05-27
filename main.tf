@@ -6,9 +6,11 @@ resource "aws_api_gateway_rest_api" "this" {
 }
 
 resource "aws_api_gateway_resource" "this" {
-  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
-  path_part   = var.api_gtw.path
+  for_each = local.api_resources
+
   rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = each.value
 }
 
 resource "aws_api_gateway_authorizer" "this" {
@@ -21,18 +23,14 @@ resource "aws_api_gateway_authorizer" "this" {
 }
 
 resource "aws_api_gateway_stage" "this" {
-  for_each = toset(var.api_gtw.stages)
-
   rest_api_id   = aws_api_gateway_rest_api.this.id
-  stage_name    = each.key
-  deployment_id = aws_api_gateway_deployment.this_gtw_deployment[each.key].id
+  deployment_id = aws_api_gateway_deployment.this_gtw_deployment.id
+  stage_name    = var.api_gtw.stage
 }
 
 resource "aws_api_gateway_method_settings" "this" {
-  for_each = toset(var.api_gtw.stages)
-
   rest_api_id = aws_api_gateway_rest_api.this.id
-  stage_name  = aws_api_gateway_stage.this[each.key].stage_name
+  stage_name  = aws_api_gateway_stage.this.stage_name
   method_path = "*/*"
 
   settings {
@@ -50,13 +48,11 @@ resource "aws_api_gateway_method_settings" "this" {
 }
 
 resource "aws_api_gateway_deployment" "this_gtw_deployment" {
-  for_each = toset(var.api_gtw.stages)
-
   rest_api_id = aws_api_gateway_rest_api.this.id
 
   triggers = {
     redeployment = sha1(jsonencode([
-      local.lambda_resources[each.key],
+      local.lambda_resources,
       aws_api_gateway_integration_response.this_cors
     ]))
   }

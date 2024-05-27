@@ -11,55 +11,48 @@ locals {
     }
   }) : {}
 
+  # var.integrations keys -> "METHOD /PATH"
+  api_methods   = toset([for k, v in var.integrations : split(" ", k)[0]]) # split(" ", k)[0] -> METHOD
+  api_resources = toset([for k, v in var.integrations : split(" ", k)[1]]) # split(" ", k)[1] -> PATH
+
+  ##########################################
+  # ------------ Integrations ------------ #
+  ##########################################
+  integrations = tomap({
+    for k, integration in var.integrations : k => merge(
+      integration,
+      {
+        name   = integration.name == null ? null : var.resources_prefix != null && integration.with_prefix ? "${var.resources_prefix}__${integration.name}" : integration.name
+        method = split(" ", k)[0]
+        path   = split(" ", k)[1]
+      }
+    )
+  })
+
   ####################################
   # ------------ Lambda ------------ #
   ####################################
-  lambdas = var.api_gtw.integration.lambdas != null ? flatten([
-    for lambda in var.api_gtw.integration.lambdas : flatten([
-      for stage in var.api_gtw.stages : merge(
-        lambda, {
-          name         = var.resources_prefix != null ? lambda.with_stage_postfix ? "${var.resources_prefix}__${lambda.name}__${stage}" : "${var.resources_prefix}__${lambda.name}" : lambda.with_stage_postfix ? "${lambda.name}__${stage}" : lambda.name
-          service_name = lambda.name
-        }
-      ) if lambda != null
-    ])
-  ]) : []
+  lambdas_name = flatten([
+    for integration in local.integrations : integration.name
+    if integration.name != null && integration.type == "lambda"
+  ])
 
-  lambdas_name = flatten([for lambda in local.lambdas : lambda.name])
-
-  lambda_methods = var.api_gtw.integration.lambdas != null ? merge(
-    flatten([
-      for lambda in var.api_gtw.integration.lambdas : tomap({
-        for int_method in lambda.integration_methods : int_method.method => int_method
-      })
-    ])...
-  ) : tomap({})
-
-  lambda_integrations = merge(
-    flatten([
-      for stage in var.api_gtw.stages : flatten([
-        for lambda in local.lambdas : tomap({
-          for integration in lambda.integration_methods : "${upper(integration.method)} ${lambda.name}" => {
-            integration_name = "${upper(integration.method)} ${lambda.name}"
-            gtw_name         = local.gateway_name
-            lambda_name      = lambda.name
-            service_name     = lambda.service_name
-            method           = integration.method
-            lambda_uri       = data.aws_lambda_function.this[lambda.name].invoke_arn
-          }
-        })
-      ])
-    ])...
-  )
+  lambdas = tomap({
+    for k, lambda in local.integrations : k => merge(
+      lambda,
+      { arn = lambda.arn != null ? lambda.arn : data.aws_lambda_function.this[lambda.name].invoke_arn }
+    )
+  })
 
   #################################
   # ------------ SNS ------------ #
   #################################
-  sns_list = var.api_gtw.integration.sns != null ? flatten([
-    for sns_integration in var.api_gtw.integration.sns : merge(
-      sns_integration, { name = var.resources_prefix != null ? "${var.resources_prefix}__${sns_integration.name}" : sns_integration.name }
-    ) if sns_integration != null
-  ]) : []
+  # sns_list = var.api_gtw.integration.sns != null ? flatten([
+  #   for sns_integration in var.api_gtw.integration.sns : merge(
+  #     sns_integration, { name = var.resources_prefix != null ? "${var.resources_prefix}__${sns_integration.name}" : sns_integration.name }
+  #   ) if sns_integration != null
+  # ]) : []
+  sns_list = []
 
   sns_names               = flatten([for sns in local.sns_list : sns.name])
   sns_integration_methods = flatten([for sns in local.sns_list : sns.integration_methods])
@@ -92,11 +85,9 @@ locals {
   #######################################
   # Used to redeploy API Gateway
   lambda_resources = tomap({
-    for stage in var.api_gtw.stages : stage => flatten([
-      for resource in local.lambda_integrations : [
-        aws_api_gateway_method.this_lambda[resource.method],
-        aws_api_gateway_integration.this_lambda[resource.integration_name]
-      ]
-    ])
+    # for resource in local.lambda_integrations : [
+    #   aws_api_gateway_method.this_lambda[resource.method],
+    #   aws_api_gateway_integration.this_lambda[resource.integration_name]
+    # ]
   })
 }
