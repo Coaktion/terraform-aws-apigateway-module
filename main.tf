@@ -6,28 +6,30 @@ resource "aws_api_gateway_rest_api" "this" {
 }
 
 resource "aws_api_gateway_resource" "this" {
-  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
-  path_part   = var.api_gtw.path
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  for_each = local.api_resources
+
+  rest_api_id = local.rest_api.id
+  parent_id   = local.rest_api.root_resource_id
+  path_part   = each.value
 }
 
 resource "aws_api_gateway_authorizer" "this" {
   for_each = local.authorizer
 
   name          = each.value.name
-  rest_api_id   = aws_api_gateway_rest_api.this.id
+  rest_api_id   = local.rest_api.id
   type          = "COGNITO_USER_POOLS"
   provider_arns = each.value.provider_arns
 }
 
 resource "aws_api_gateway_stage" "this" {
-  rest_api_id   = aws_api_gateway_rest_api.this.id
-  stage_name    = var.api_gtw.stage
+  rest_api_id   = local.rest_api.id
   deployment_id = aws_api_gateway_deployment.this_gtw_deployment.id
+  stage_name    = var.api_gtw.stage
 }
 
 resource "aws_api_gateway_method_settings" "this" {
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
   stage_name  = aws_api_gateway_stage.this.stage_name
   method_path = "*/*"
 
@@ -46,13 +48,10 @@ resource "aws_api_gateway_method_settings" "this" {
 }
 
 resource "aws_api_gateway_deployment" "this_gtw_deployment" {
-  rest_api_id = aws_api_gateway_rest_api.this.id
+  rest_api_id = local.rest_api.id
 
-  triggers = { // TODO review
-    redeployment = sha1(jsonencode([
-      local.lambda_resources,
-      aws_api_gateway_integration_response.this_cors
-    ]))
+  triggers = {
+    redeployment = sha1(jsonencode(local.deploy_trigger))
   }
 
   lifecycle {

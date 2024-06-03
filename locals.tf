@@ -3,6 +3,7 @@ locals {
   # ------------ API Gateway ------------ #
   #########################################
   gateway_name = var.resources_prefix != null ? "${var.resources_prefix}__${var.api_gtw.name}" : var.api_gtw.name
+  rest_api     = var.api_gtw.create_api ? aws_api_gateway_rest_api.this : data.aws_api_gateway_rest_api.this[local.gateway_name]
 
   authorizer = var.api_gtw.cognito_authorizer != null ? tomap({
     local.gateway_name = {
@@ -11,81 +12,87 @@ locals {
     }
   }) : {}
 
+  # var.integrations keys -> "METHOD /PATH"
+  api_methods   = toset([for k, v in var.integrations : split(" ", k)[0]]) # split(" ", k)[0] -> METHOD
+  api_resources = toset([for k, v in var.integrations : split(" ", k)[1]]) # split(" ", k)[1] -> PATH
+
+  ##########################################
+  # ------------ Integrations ------------ #
+  ##########################################
+  integrations = tomap({
+    for k, integration in var.integrations : k => merge(
+      integration,
+      {
+        name   = integration.name == null ? null : var.resources_prefix != null && integration.with_prefix ? "${var.resources_prefix}__${integration.name}" : integration.name
+        method = split(" ", k)[0]
+        path   = split(" ", k)[1]
+      }
+    )
+  })
+
   ####################################
   # ------------ Lambda ------------ #
   ####################################
-  lambdas = var.api_gtw.integration.lambdas != null ? flatten([
-    for lambda in var.api_gtw.integration.lambdas : merge(
-      lambda, { name = var.resources_prefix != null ? "${var.resources_prefix}__${lambda.name}" : lambda.name }
-    ) if lambda != null
-  ]) : []
+  lambdas_name = flatten([
+    for integration in local.integrations : integration.name
+    if integration.name != null && integration.type == "lambda"
+  ])
 
-  lambdas_name                = flatten([for lambda in local.lambdas : lambda.name])
-  lambdas_integration_methods = flatten([for lambda in local.lambdas : lambda.integration_methods])
-
-
-  lambda_integrations = merge(
-    flatten([
-      for integration_method in local.lambdas_integration_methods : tomap({
-        for lambda in local.lambdas : "${upper(integration_method.method)} ${lambda.name}" => {
-          integration_name = "${upper(integration_method.method)} ${lambda.name}"
-          gtw_name         = local.gateway_name
-          lambda_name      = lambda.name
-          method           = integration_method.method
-          with_autorizer   = integration_method.with_autorizer
-          lambda_uri       = data.aws_lambda_function.this[lambda.name].invoke_arn
-          rest_api_id      = aws_api_gateway_rest_api.this.id
-          resource_id      = aws_api_gateway_resource.this.id
-        }
-      })
-    ])...
-  )
+  lambdas = tomap({
+    for k, lambda in local.integrations : k => merge(
+      lambda,
+      { arn = lambda.arn != null ? lambda.arn : data.aws_lambda_function.this[lambda.name].invoke_arn }
+    ) if lambda.type == "lambda"
+  })
 
   #################################
   # ------------ SNS ------------ #
   #################################
-  sns_list = var.api_gtw.integration.sns != null ? flatten([
-    for sns_integration in var.api_gtw.integration.sns : merge(
-      sns_integration, { name = var.resources_prefix != null ? "${var.resources_prefix}__${sns_integration.name}" : sns_integration.name }
-    ) if sns_integration != null
-  ]) : []
-
-  sns_names               = flatten([for sns in local.sns_list : sns.name])
-  sns_integration_methods = flatten([for sns in local.sns_list : sns.integration_methods])
-
-  request_parse = tomap({
-    for sns in local.sns_list : sns.name => "Action=Publish&TopicArn=$util.urlEncode('${data.aws_sns_topic.this[sns.name].arn}')&Message=$util.urlEncode($input.body)"
-  })
-  request_mapping = tomap({
-    for sns in local.sns_list : sns.name => sns.fifo ? "${local.request_parse[sns.name]}&MessageGroupId=$context.requestId" : local.request_parse[sns.name]
+  request_parse = tomap({ # Used to parse request body
+    for k, integration in local.integrations : k => format(
+      "Action=Publish&TopicArn=$util.urlEncode('%s')&Message=$util.urlEncode($input.body)",
+      integration.arn != null ? integration.arn : data.aws_sns_topic.this[integration.name].arn
+    ) if integration.type == "sns"
   })
 
-  sns_integrations = merge(
-    flatten([
-      for integration_method in local.sns_integration_methods : tomap({
-        for sns in local.sns_list : "${upper(integration_method.method)} ${sns.name}" => {
-          integration_name = "${sns.name}__${integration_method.method}"
-          gtw_name         = local.gateway_name
-          method           = integration_method.method
-          with_autorizer   = integration_method.with_autorizer
-          fifo             = sns.fifo
-          topic_arn        = data.aws_sns_topic.this[sns.name].arn
-          rest_api_id      = aws_api_gateway_rest_api.this.id
-          resource_id      = aws_api_gateway_resource.this.id
-          request_mapping  = local.request_mapping[sns.name]
-        }
-      })
-    ])...
-  )
+  sns_names = flatten([
+    for k, integration in local.integrations : integration.fifo ? "${integration.name}.fifo" : integration.name
+    if integration.name != null && integration.type == "sns"
+  ])
+
+  sns_list = tomap({
+    for k, sns in local.integrations : k => merge(
+      sns,
+      {
+        arn             = sns.arn != null ? sns.arn : data.aws_sns_topic.this[sns.name].arn
+        request_mapping = sns.fifo ? "${local.request_parse[k]}&MessageGroupId=$context.requestId" : local.request_parse[k]
+      }
+    ) if sns.type == "sns"
+  })
 
   #######################################
   # ------------ Resources ------------ #
   #######################################
-  # Used to redeploy API Gateway
-  lambda_resources = toset([
-    for resource in local.lambda_integrations : [
-      aws_api_gateway_method.this_lambda[resource.integration_name],
-      aws_api_gateway_integration.this_lambda[resource.integration_name]
-    ]
+  lambda_resources = flatten([
+    for k, integration in local.integrations : [
+      aws_api_gateway_method.this_lambda[k],
+      aws_api_gateway_integration.this_lambda[k]
+    ] if integration.type == "lambda"
+  ])
+
+  sns_resources = flatten([
+    for k, integration in local.integrations : [
+      aws_api_gateway_method.this_pub_sub[k],
+      aws_api_gateway_integration.this_pub_sub[k]
+    ] if integration.type == "sns"
+  ])
+
+  deploy_trigger = flatten([
+    for resource in local.api_resources : flatten([
+      local.lambda_resources, # If any method or integration from lambda changes, the deployment will be triggered
+      local.sns_resources,    # If any method or integration from sns changes, the deployment will be triggered
+      aws_api_gateway_integration_response.this_cors[resource],
+      aws_api_gateway_method_response.this_cors[resource],
+    ])
   ])
 }

@@ -1,11 +1,11 @@
-#################################################
-# ------------ Lambda Response Map ------------ #
-#################################################
-resource "aws_api_gateway_method_response" "this_lambda" {
-  for_each = local.lambda_integrations
+######################################################
+# ------------ Integration Response Map ------------ #
+######################################################
+resource "aws_api_gateway_method_response" "this" {
+  for_each = local.lambdas
 
-  rest_api_id = each.value.rest_api_id
-  resource_id = each.value.resource_id
+  rest_api_id = local.rest_api.id
+  resource_id = aws_api_gateway_resource.this[each.value.path].id
   http_method = each.value.method
   status_code = "200"
 
@@ -13,17 +13,17 @@ resource "aws_api_gateway_method_response" "this_lambda" {
     "application/json" = "Empty"
   }
 
-  depends_on = [
-    aws_api_gateway_method.this_lambda
-  ]
+  depends_on = [aws_api_gateway_method.this_lambda]
 }
 
 #######################################
 # ------------ CORS Mock ------------ #
 #######################################
 resource "aws_api_gateway_method_response" "this_cors" {
-  rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.this.id
+  for_each = local.api_resources
+
+  rest_api_id = local.rest_api.id
+  resource_id = aws_api_gateway_resource.this[each.value].id
   http_method = "OPTIONS"
   status_code = "200"
 
@@ -37,14 +37,14 @@ resource "aws_api_gateway_method_response" "this_cors" {
     "method.response.header.Access-Control-Allow-Origin"  = true
   }
 
-  depends_on = [
-    aws_api_gateway_method.this_cors
-  ]
+  depends_on = [aws_api_gateway_method.this_cors]
 }
 
 resource "aws_api_gateway_integration_response" "this_cors" {
-  rest_api_id = aws_api_gateway_rest_api.this.id
-  resource_id = aws_api_gateway_resource.this.id
+  for_each = local.api_resources
+
+  rest_api_id = local.rest_api.id
+  resource_id = aws_api_gateway_resource.this[each.value].id
   http_method = "OPTIONS"
   status_code = "200"
 
