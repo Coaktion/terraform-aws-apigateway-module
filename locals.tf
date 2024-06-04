@@ -3,7 +3,15 @@ locals {
   # ------------ API Gateway ------------ #
   #########################################
   gateway_name = var.resources_prefix != null ? "${var.resources_prefix}__${var.api_gtw.name}" : var.api_gtw.name
-  rest_api     = var.api_gtw.create_api ? aws_api_gateway_rest_api.this : data.aws_api_gateway_rest_api.this[local.gateway_name]
+  rest_api = var.api_gtw.create_api ? {
+    id               = aws_api_gateway_rest_api.this.id
+    root_resource_id = aws_api_gateway_rest_api.this.root_resource_id
+    execution_arn    = aws_api_gateway_rest_api.this.execution_arn
+    } : {
+    id               = data.aws_api_gateway_rest_api.this[local.gateway_name].id
+    root_resource_id = data.aws_api_gateway_rest_api.this[local.gateway_name].root_resource_id
+    execution_arn    = data.aws_api_gateway_rest_api.this[local.gateway_name].execution_arn
+  }
 
   authorizer = var.api_gtw.cognito_authorizer != null ? tomap({
     local.gateway_name = {
