@@ -17,6 +17,10 @@ resource "aws_api_gateway_integration" "this_cors" {
   resource_id = aws_api_gateway_resource.this[each.value].id
   http_method = aws_api_gateway_method.this_cors[each.value].http_method
   type        = "MOCK"
+
+  request_templates = {
+    "application/json" = jsonencode({ statusCode = 200 })
+  }
 }
 
 ####################################

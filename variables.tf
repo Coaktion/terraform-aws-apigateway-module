@@ -45,6 +45,7 @@ variable "api_gtw" {
 
 variable "integrations" {
   description = "List of integrations to link with the API Gateway."
+  # The key is -> "METHOD /PATH" (e.g. "ANY /{proxy+}")
   type = map(object({
     name = optional(string) # Recover an existing resource by name
     arn  = optional(string) # ARN of the resource to be integrated
