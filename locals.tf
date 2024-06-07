@@ -14,7 +14,7 @@ locals {
   }
 
   authorizer = var.api_gtw.cognito_authorizer != null ? tomap({
-    local.gateway_name = {
+    (local.gateway_name) = {
       name          = var.api_gtw.cognito_authorizer.name
       provider_arns = var.api_gtw.cognito_authorizer.provider_arns
     }
