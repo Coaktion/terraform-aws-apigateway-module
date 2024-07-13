@@ -2,7 +2,7 @@
 # ------------ CORS ------------ #
 ##################################
 resource "aws_api_gateway_method" "this_cors" {
-  for_each = local.api_resources
+  for_each = local.api_mock_resources
 
   rest_api_id   = local.rest_api.id
   resource_id   = aws_api_gateway_resource.this[each.value].id
@@ -11,7 +11,7 @@ resource "aws_api_gateway_method" "this_cors" {
 }
 
 resource "aws_api_gateway_integration" "this_cors" {
-  for_each = local.api_resources
+  for_each = local.api_mock_resources
 
   rest_api_id = local.rest_api.id
   resource_id = aws_api_gateway_resource.this[each.value].id

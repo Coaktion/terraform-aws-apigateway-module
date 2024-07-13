@@ -23,6 +23,10 @@ locals {
   # var.integrations keys -> "METHOD /PATH"
   api_methods   = toset([for k, v in var.integrations : split(" ", k)[0]]) # split(" ", k)[0] -> METHOD
   api_resources = toset([for k, v in var.integrations : split(" ", k)[1]]) # split(" ", k)[1] -> PATH
+  api_mock_resources = toset([
+    for k, integration in var.integrations : split(" ", k)[1]
+    if integration.type == "lambda" # Only lambda integrations will need the CORS Mock
+  ])
 
   ##########################################
   # ------------ Integrations ------------ #
@@ -96,7 +100,7 @@ locals {
   ])
 
   deploy_trigger = flatten([
-    for resource in local.api_resources : flatten([
+    for resource in local.api_mock_resources : flatten([
       local.lambda_resources, # If any method or integration from lambda changes, the deployment will be triggered
       local.sns_resources,    # If any method or integration from sns changes, the deployment will be triggered
       aws_api_gateway_integration_response.this_cors[resource],
