@@ -23,10 +23,15 @@ locals {
   # var.integrations keys -> "METHOD /PATH"
   api_methods   = toset([for k, v in var.integrations : split(" ", k)[0]]) # split(" ", k)[0] -> METHOD
   api_resources = toset([for k, v in var.integrations : split(" ", k)[1]]) # split(" ", k)[1] -> PATH
-  api_mock_resources = toset([
+
+  api_resources_with_custom_cors = toset([
+    for k, integration in var.integrations : split(" ", k)[1]
+    if startswith(k, "OPTIONS")
+  ])
+  api_mock_resources = setsubtract(local.api_resources_with_custom_cors, toset([
     for k, integration in var.integrations : split(" ", k)[1]
     if integration.type == "lambda" # Only lambda integrations will need the CORS Mock
-  ])
+  ]))
 
   ##########################################
   # ------------ Integrations ------------ #
