@@ -43,6 +43,12 @@ locals {
 
   api_mock_resources = setsubtract(local.api_cors_required_resources, local.api_resources_with_custom_cors)
 
+  cors_response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'${join(",", var.api_gtw.cors.allow_headers)}'"
+    "method.response.header.Access-Control-Allow-Methods" = "'${join(",", var.api_gtw.cors.allow_methods)}'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.api_gtw.cors.allow_origin}'"
+  }
+
   ##########################################
   # ------------ Integrations ------------ #
   ##########################################

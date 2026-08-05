@@ -28,6 +28,16 @@ variable "api_gtw" {
       provider_arns = list(string)
     }))
 
+    # Headers returned by the CORS mock. The defaults reproduce the values that
+    # were hardcoded before, so existing callers see no change. Override when the
+    # application sends custom request headers: a header missing from
+    # allow_headers makes the browser reject the preflight.
+    cors = optional(object({
+      allow_headers = optional(list(string), ["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key", "X-Amz-Security-Token", "X-Amz-User-Agent", "X-Amzn-Trace-Id"])
+      allow_methods = optional(list(string), ["OPTIONS", "DELETE", "GET", "HEAD", "PATCH", "POST", "PUT"])
+      allow_origin  = optional(string, "*")
+    }), {})
+
     settings = optional(object({
       metrics_enabled                            = optional(bool)
       logging_level                              = optional(string)
