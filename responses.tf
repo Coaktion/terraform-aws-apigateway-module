@@ -91,11 +91,7 @@ resource "aws_api_gateway_integration_response" "this_cors" {
     "application/json" = ""
   }
 
-  response_parameters = {
-    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent,X-Amzn-Trace-Id'",
-    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,DELETE,GET,HEAD,PATCH,POST,PUT'",
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
-  }
+  response_parameters = local.cors_response_parameters
 
   depends_on = [
     aws_api_gateway_method_response.this_cors,

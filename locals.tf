@@ -24,14 +24,30 @@ locals {
   api_methods   = toset([for k, v in var.integrations : split(" ", k)[0]]) # split(" ", k)[0] -> METHOD
   api_resources = toset([for k, v in var.integrations : split(" ", k)[1]]) # split(" ", k)[1] -> PATH
 
+  # Paths where the caller declared their own "OPTIONS <path>" integration, and
+  # so bring their own CORS. These must never get the mock on top.
   api_resources_with_custom_cors = toset([
     for k, integration in var.integrations : split(" ", k)[1]
     if startswith(k, "OPTIONS")
   ])
-  api_mock_resources = setsubtract(local.api_resources_with_custom_cors, toset([
+
+  # The mock is only load-bearing behind an authorizer: a browser preflight sends
+  # no Authorization header, so an authorized method rejects it with a 401 (and no
+  # CORS headers) before the integration ever runs. Without an authorizer the
+  # catch-all method already answers OPTIONS and the lambda replies for itself, so
+  # adding a mock there would quietly take preflight away from the application.
+  api_cors_required_resources = toset([
     for k, integration in var.integrations : split(" ", k)[1]
-    if integration.type == "lambda" # Only lambda integrations will need the CORS Mock
-  ]))
+    if integration.type == "lambda" && integration.with_autorizer && var.api_gtw.cognito_authorizer != null
+  ])
+
+  api_mock_resources = setsubtract(local.api_cors_required_resources, local.api_resources_with_custom_cors)
+
+  cors_response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'${join(",", var.api_gtw.cors.allow_headers)}'"
+    "method.response.header.Access-Control-Allow-Methods" = "'${join(",", var.api_gtw.cors.allow_methods)}'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'${var.api_gtw.cors.allow_origin}'"
+  }
 
   ##########################################
   # ------------ Integrations ------------ #
@@ -104,12 +120,17 @@ locals {
     ] if integration.type == "sns"
   ])
 
+  # Kept flat, not nested under api_mock_resources: with an empty mock set the old
+  # shape collapsed the whole trigger to sha1("[]"), so lambda and sns changes
+  # stopped forcing a redeployment and never went live.
   deploy_trigger = flatten([
-    for resource in local.api_mock_resources : flatten([
-      local.lambda_resources, # If any method or integration from lambda changes, the deployment will be triggered
-      local.sns_resources,    # If any method or integration from sns changes, the deployment will be triggered
-      aws_api_gateway_integration_response.this_cors[resource],
-      aws_api_gateway_method_response.this_cors[resource],
-    ])
+    local.lambda_resources, # If any method or integration from lambda changes, the deployment will be triggered
+    local.sns_resources,    # If any method or integration from sns changes, the deployment will be triggered
+    [
+      for resource in local.api_mock_resources : [
+        aws_api_gateway_integration_response.this_cors[resource],
+        aws_api_gateway_method_response.this_cors[resource],
+      ]
+    ],
   ])
 }
